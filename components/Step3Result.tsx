@@ -19,7 +19,27 @@ const Step3Result: React.FC<Step3ResultProps> = ({ personImage, clothesImage, on
       const resultBase64 = await generateTryOnImage(personImage, clothesImage);
       onResultGenerated(resultBase64);
     } catch (err: any) {
-      setError("生成失败，请稍后重试。可能由于图片内容过于复杂或服务器繁忙。");
+      console.error("Generation failed:", err);
+      let errorMessage = "生成失败，请稍后重试。";
+      
+      // Extract more specific error info if available
+      if (err.message) {
+          if (err.message.includes("API key")) {
+              errorMessage = "API Key 无效或缺失，请检查配置。";
+          } else if (err.message.includes("403")) {
+               errorMessage = "访问被拒绝 (403)。请确保你的浏览器已开启代理 (科学上网)。";
+          } else if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+               errorMessage = "网络连接失败。请检查你的网络代理设置 (需要连接到 Google)。";
+          } else if (err.message.includes("429")) {
+               errorMessage = "请求过多 (Rate Limit)，请稍后再试。";
+          } else if (err.message.includes("Candidate was blocked")) {
+               errorMessage = "图片生成被安全策略拦截，请尝试更换图片或描述。";
+          } else {
+              errorMessage = `错误: ${err.message}`;
+          }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }

@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["node_modules/@google/genai/**"]
+
+[dev]
+  command = "npm run dev"
+  targetPort = 3000
