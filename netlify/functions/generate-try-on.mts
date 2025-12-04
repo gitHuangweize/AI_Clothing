@@ -1,5 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { MODEL_NAME } from "../../constants";
+import { setGlobalDispatcher, ProxyAgent } from 'undici';
+
+// 在文件顶部执行，确保开发环境能连上 Google
+if (process.env.NODE_ENV !== 'production') {
+    const proxyUrl = process.env.HTTPS_PROXY || 'http://127.0.0.1:10808';
+    try {
+        // 只有当没有设置 dispatcher 时才设置，避免重复日志 (虽然重复设置也没大碍)
+        setGlobalDispatcher(new ProxyAgent(proxyUrl));
+    } catch (e) {
+        // 忽略错误
+    }
+}
+
 
 
 const stripBase64Header = (base64Str: string): string => {

@@ -15,6 +15,7 @@ const Step2Clothes: React.FC<Step2ClothesProps> = ({ onSelect, personImage, curr
   const [customPresets, setCustomPresets] = useState<string[]>([]);
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingTime, setGeneratingTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [urlInput, setUrlInput] = useState('');
 
@@ -63,15 +64,28 @@ const Step2Clothes: React.FC<Step2ClothesProps> = ({ onSelect, personImage, curr
   const handleAiGeneration = async () => {
     if (!prompt.trim()) return;
     setIsGenerating(true);
+    setGeneratingTime(0);
+
+    // 启动计时器
+    const timer = setInterval(() => {
+      setGeneratingTime(prev => prev + 1);
+    }, 1000);
+
     try {
       const generatedImage = await generateClothesFromText(prompt);
+      clearInterval(timer);
       setCustomPresets(prev => [generatedImage, ...prev]);
       onSelect(generatedImage);
       setActiveTab('preset'); // Switch to preset to show the result
-    } catch (error) {
-      alert("生成服装失败，请重试");
+    } catch (error: any) {
+      clearInterval(timer);
+      const msg = error.message?.includes('超时') 
+        ? '请求超时，请重试' 
+        : '生成服装失败，请重试';
+      alert(msg);
     } finally {
       setIsGenerating(false);
+      setGeneratingTime(0);
     }
   };
 
@@ -188,7 +202,7 @@ const Step2Clothes: React.FC<Step2ClothesProps> = ({ onSelect, personImage, curr
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Nano Banana 正在设计...</span>
+                    <span>正在设计中... ({generatingTime}s)</span>
                    </>
                ) : (
                    <>

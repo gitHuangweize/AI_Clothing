@@ -1,5 +1,52 @@
 
-export const convertBlobToBase64 = (blob: Blob): Promise<string> => {
+export const compressImage = (file: Blob, maxWidth: number = 1024, quality: number = 0.8): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('Canvas to Blob failed'));
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
+export const convertBlobToBase64 = async (blob: Blob): Promise<string> => {
+  // Auto compress if large (e.g. > 1MB)
+  if (blob.size > 1024 * 1024) {
+     try {
+       const compressed = await compressImage(blob);
+       blob = compressed;
+     } catch (e) {
+       console.warn('Compression failed, using original', e);
+     }
+  }
+  
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;
@@ -15,7 +62,7 @@ export const fetchUrlToBase64 = async (url: string): Promise<string> => {
     const response = await fetch(targetUrl);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const blob = await response.blob();
-    return await convertBlobToBase64(blob);
+    return await convertBlobToBase64(blob); // This will now auto-compress
   };
 
   try {
