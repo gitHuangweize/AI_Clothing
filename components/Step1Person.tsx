@@ -98,7 +98,6 @@ const Step1Person: React.FC<Step1PersonProps> = ({ onSelect, currentImage }) => 
                 className={`relative group rounded-xl overflow-hidden aspect-[3/4] border-2 transition-all ${currentImage && currentImage.includes(url) ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:border-blue-300'}`}
               >
                 <img src={url} alt={`Preset ${index}`} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all" />
               </button>
             ))}
           </div>
