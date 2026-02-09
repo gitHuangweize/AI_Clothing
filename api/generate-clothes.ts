@@ -18,7 +18,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { prompt } = req.body || {};
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const { prompt } = body;
 
     if (!prompt) {
       return res.status(400).json({ error: "Missing prompt" });
@@ -56,3 +57,11 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '2mb',
+    },
+  },
+};

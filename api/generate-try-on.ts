@@ -266,7 +266,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { personBase64, clothesBase64 } = req.body || {};
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const { personBase64, clothesBase64 } = body;
 
     if (!personBase64 || !clothesBase64) {
       return res.status(400).json({ error: "Missing images" });
@@ -296,3 +297,11 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '8mb',
+    },
+  },
+};

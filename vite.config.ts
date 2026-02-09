@@ -10,6 +10,11 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
         proxy: {
+          '/api': {
+            target: 'http://localhost:9999',
+            changeOrigin: true,
+            rewrite: (pathStr) => pathStr.replace(/^\/api/, '/.netlify/functions'),
+          },
           '/.netlify/functions': {
             target: 'http://localhost:9999',
             changeOrigin: true,
