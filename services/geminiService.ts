@@ -5,6 +5,46 @@ const MAX_RETRIES = 2; // 最大重试次数
 // ============ 缓存 ============
 const tryOnCache = new Map<string, string>();
 const clothesCache = new Map<string, string>();
+const TRY_ON_CACHE_PREFIX = 'ai-try-on:tryon:';
+const CLOTHES_CACHE_PREFIX = 'ai-try-on:clothes:';
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+
+const getStorage = (): Storage | null => {
+  try {
+    if (typeof window === 'undefined') return null;
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+};
+
+const readCache = (key: string): string | null => {
+  const storage = getStorage();
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { t: number; v: string };
+    if (!parsed?.t || !parsed?.v) return null;
+    if (Date.now() - parsed.t > CACHE_TTL_MS) {
+      storage.removeItem(key);
+      return null;
+    }
+    return parsed.v;
+  } catch {
+    return null;
+  }
+};
+
+const writeCache = (key: string, value: string) => {
+  const storage = getStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(key, JSON.stringify({ t: Date.now(), v: value }));
+  } catch {
+    // Ignore quota errors
+  }
+};
 
 // 生成缓存 key (使用完整字符串 hash)
 const generateCacheKey = (...args: string[]): string => {
@@ -78,10 +118,18 @@ const fetchWithRetry = async (
 export const generateTryOnImage = async (personBase64: string, clothesBase64: string): Promise<string> => {
   // 检查缓存
   const cacheKey = generateCacheKey(personBase64, clothesBase64);
-  const cached = tryOnCache.get(cacheKey);
-  if (cached) {
+  const memoryCached = tryOnCache.get(cacheKey);
+  if (memoryCached) {
     console.log('[Cache] 使用缓存的试穿结果');
-    return cached;
+    return memoryCached;
+  }
+
+  const storageKey = `${TRY_ON_CACHE_PREFIX}${cacheKey}`;
+  const storageCached = readCache(storageKey);
+  if (storageCached) {
+    tryOnCache.set(cacheKey, storageCached);
+    console.log('[Cache] 使用本地存储的试穿结果');
+    return storageCached;
   }
 
   const response = await fetchWithRetry('/.netlify/functions/generate-try-on', {
@@ -99,6 +147,7 @@ export const generateTryOnImage = async (personBase64: string, clothesBase64: st
   
   // 存入缓存
   tryOnCache.set(cacheKey, data.output);
+  writeCache(storageKey, data.output);
   
   return data.output;
 };
@@ -110,10 +159,18 @@ export const generateTryOnImage = async (personBase64: string, clothesBase64: st
 export const generateClothesFromText = async (prompt: string): Promise<string> => {
   // 检查缓存
   const cacheKey = generateCacheKey(prompt);
-  const cached = clothesCache.get(cacheKey);
-  if (cached) {
+  const memoryCached = clothesCache.get(cacheKey);
+  if (memoryCached) {
     console.log('[Cache] 使用缓存的服装生成结果');
-    return cached;
+    return memoryCached;
+  }
+
+  const storageKey = `${CLOTHES_CACHE_PREFIX}${cacheKey}`;
+  const storageCached = readCache(storageKey);
+  if (storageCached) {
+    clothesCache.set(cacheKey, storageCached);
+    console.log('[Cache] 使用本地存储的服装生成结果');
+    return storageCached;
   }
 
   const response = await fetchWithRetry('/.netlify/functions/generate-clothes', {
@@ -131,6 +188,7 @@ export const generateClothesFromText = async (prompt: string): Promise<string> =
   
   // 存入缓存
   clothesCache.set(cacheKey, data.output);
+  writeCache(storageKey, data.output);
   
   return data.output;
 };
